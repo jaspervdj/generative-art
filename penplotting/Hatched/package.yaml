@@ -11,9 +11,7 @@ dependencies:
     - generative-art
     - base
     - cairo
-    - FontyFruity
     - plotfont
-    - vector
 
 executables:
     penplotting-hatched:
