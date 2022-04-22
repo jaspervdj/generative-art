@@ -4,6 +4,8 @@ module Main (main) where
 import Data.List (sortOn)
 import qualified Graphics.PlotFont as PF
 import Text.Printf
+import Graphics.Text.TrueType
+import qualified Data.Vector.Unboxed as V
 
 import Draw.Plotting
 import Draw
@@ -23,10 +25,12 @@ main = do
     let settings = def
             { _feedrate = 30000
             , _zTravelHeight = 1
-            , _canvasBoundingBox = Just (boundingBox [zero, Vec2 picWidth picHeight])
+            --, _canvasBoundingBox = Just (boundingBox [zero, Vec2 picWidth picHeight])
             }
+    Right font <- loadFontFile "/home/fthoma/.nix-profile/share/fonts/truetype/iosevka-custom-regular.ttf"
     writeGCodeFile "hatching-pen-pressure.g" $ runPlot settings penPressure
-    writeGCodeFile "hatching-density.g" $ runPlot settings hatchingDensity
+    --writeGCodeFile "hatching-density.g" $ runPlot settings (hatchingDensity font)
+    renderPreview "out/hatching-density.svg" $ runPlot settings (hatchingDensity font)
 
 penPressure :: Plot ()
 penPressure = do
@@ -38,11 +42,13 @@ penPressure = do
             repositionTo p
             lineTo q
 
-hatchingDensity :: Plot ()
-hatchingDensity = for_ (zip [ (x, y) | y <- [4, 3..0], x <- [0..4]] [0.1, 0.2 :: Double ..]) $ \((x, y), density) -> do
+hatchingDensity :: Font -> Plot ()
+hatchingDensity font = for_ (zip [ (x, y) | y <- [3,2..0], x <- [0..4]] [0.1, 0.2 :: Double ..]) $ \((x, y), density) -> do
     let strokes = Polyline . fmap (uncurry Vec2) <$> PF.render' PF.canvastextFont (printf "%.1f" density)
+        glyphs = concat $ getStringCurveAtPoint 96 (0, 0) [(font, PointSize 5, printf "%.1fmm" density)]
         origin = Vec2 (x * 30) (y * 40)
-    for_ strokes $ plot . transform (translate origin <> translate (Vec2 0 21) <> scale 0.2)
+    for_ glyphs $ plot . transform (translate origin <> translate (Vec2 0 21) <> mirrorYCoords) . Polyline . fmap (\(x, y) -> Vec2 (realToFrac x) (realToFrac y)) . V.toList
+    --for_ strokes $ plot . transform (translate origin <> translate (Vec2 0 21) <> scale 0.2)
     let box = transform (translate origin) (boundingBoxPolygon (boundingBox [zero, Vec2 20 20]))
         hatches = zigzag (hatch box (deg 0) density)
     plot hatches
