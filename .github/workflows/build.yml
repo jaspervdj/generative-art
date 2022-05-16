@@ -1,0 +1,39 @@
+name: CI
+
+on:
+    push:
+        branches: [ master ]
+    pull_request:
+        branches: [ master ]
+
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Install GHCUP
+              run: curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+
+            - name: Install Stack
+              run: ~/.ghcup/bin/ghcup
+              run: ~/.ghcup/bin
+
+            - name: Install necessary software
+              run: |
+                curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+                export PATH="$HOME/.ghcup/bin:$PATH"
+                ghcup install stack
+
+            - name: Build
+              run: |
+                cd "$GITHUB_WORKSPACE"
+                stack build --test --no-run-tests
+
+            - name: Test
+              run: |
+                cd "$GITHUB_WORKSPACE"
+                stack build --test
